@@ -12,9 +12,9 @@ import {
   DropdownMenuTrigger,
 } from './dropdown-menu';
 import Link from 'next/link';
-import { useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 export function UserNav({
   image,
@@ -25,15 +25,23 @@ export function UserNav({
   name: string;
   email: string;
 }) {
-  const { signOut } = useClerk();
   const router = useRouter();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-            <Image src={image} fill alt="profile picture" sizes="10rem" />
+            {image ? (
+              <Image src={image} fill alt="profile picture" sizes="10rem" />
+            ) : (
+              <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+            )}
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -54,7 +62,7 @@ export function UserNav({
           </DropdownMenuItem>
         </Link>
         <DropdownMenuItem
-          onClick={() => signOut(() => router.push('/'))}
+          onClick={handleSignOut}
           className="hover:cursor-pointer hover:bg-gray-200"
         >
           <LogOut className="mr-2 h-4 w-4 text-black" />

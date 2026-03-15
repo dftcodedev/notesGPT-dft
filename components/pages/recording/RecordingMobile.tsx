@@ -1,28 +1,27 @@
 import Link from 'next/link';
 import { useState } from 'react';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { supabase } from '@/lib/supabase';
+import type { Note, ActionItem } from '@/lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
-import { Doc } from '@/convex/_generated/dataModel';
 
 export default function RecordingMobile({
   note,
   actionItems,
 }: {
-  note: Doc<'notes'>;
-  actionItems: Doc<'actionItems'>[];
+  note: Note;
+  actionItems: ActionItem[];
 }) {
-  const { summary, transcription, title, _creationTime } = note;
+  const { summary, transcription, title, created_at } = note;
   const [transcriptOpen, setTranscriptOpen] = useState<boolean>(true);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
   const [actionItemOpen, setActionItemOpen] = useState<boolean>(false);
+  const [items, setItems] = useState(actionItems);
 
-  const mutateActionItems = useMutation(api.notes.removeActionItem);
-
-  function removeActionItem(actionId: any) {
-    // Trigger a mutation to remove the item from the list
-    mutateActionItems({ id: actionId });
-  }
+  const removeActionItem = async (actionId: string) => {
+    await supabase.from('action_items').delete().eq('id', actionId);
+    setItems(items.filter(item => item.id !== actionId));
+    toast.success('1 task completed.');
+  };
 
   return (
     <div className="md:hidden">
@@ -82,9 +81,8 @@ export default function RecordingMobile({
         )}
         {actionItemOpen && (
           <div className="relative min-h-[70vh] w-full px-4 py-3">
-            {' '}
             <div className="relative mx-auto mt-[27px] w-full max-w-[900px] px-5 md:mt-[45px]">
-              {actionItems?.map((item: any, idx: number) => (
+              {items?.map((item: any, idx: number) => (
                 <div
                   className="border-[#00000033] py-1 md:border-t-[1px] md:py-2"
                   key={idx}
@@ -95,8 +93,7 @@ export default function RecordingMobile({
                         <input
                           onChange={(e) => {
                             if (e.target.checked) {
-                              removeActionItem(item._id);
-                              toast.success('1 task completed.');
+                              removeActionItem(item.id);
                             }
                           }}
                           type="checkbox"
@@ -107,7 +104,7 @@ export default function RecordingMobile({
                       </div>
                       <div className="flex justify-between md:mt-2">
                         <p className="ml-9 text-[15px] font-[300] leading-[249%] tracking-[-0.6px] text-dark opacity-60 md:inline-block md:text-xl lg:text-xl">
-                          {new Date(Number(_creationTime)).toLocaleDateString()}
+                          {new Date(created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -125,7 +122,7 @@ export default function RecordingMobile({
                   View All Action Items
                 </Link>
               </div>
-            </div>{' '}
+            </div>
           </div>
         )}
         <Toaster position="bottom-left" reverseOrder={false} />

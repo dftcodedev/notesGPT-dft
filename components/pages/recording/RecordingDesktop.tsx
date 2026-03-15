@@ -1,7 +1,6 @@
-import { api } from '@/convex/_generated/api';
-import { Doc } from '@/convex/_generated/dataModel';
+import { supabase } from '@/lib/supabase';
+import type { Note, ActionItem } from '@/lib/supabase';
 import { formatTimestamp } from '@/lib/utils';
-import { useMutation } from 'convex/react';
 import Link from 'next/link';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -10,25 +9,25 @@ export default function RecordingDesktop({
   note,
   actionItems,
 }: {
-  note: Doc<'notes'>;
-  actionItems: Doc<'actionItems'>[];
+  note: Note;
+  actionItems: ActionItem[];
 }) {
   const {
-    generatingActionItems,
-    generatingTitle,
+    generating_action_items: generatingActionItems,
+    generating_title: generatingTitle,
     summary,
     transcription,
     title,
-    _creationTime,
+    created_at,
   } = note;
   const [originalIsOpen, setOriginalIsOpen] = useState<boolean>(true);
+  const [items, setItems] = useState(actionItems);
 
-  const mutateActionItems = useMutation(api.notes.removeActionItem);
-
-  function removeActionItem(actionId: any) {
-    // Trigger a mutation to remove the item from the list
-    mutateActionItems({ id: actionId });
-  }
+  const removeActionItem = async (actionId: string) => {
+    await supabase.from('action_items').delete().eq('id', actionId);
+    setItems(items.filter(item => item.id !== actionId));
+    toast.success('1 task completed.');
+  };
 
   return (
     <div className="hidden md:block">
@@ -43,7 +42,7 @@ export default function RecordingDesktop({
         </h1>
         <div className="flex items-center justify-center">
           <p className="text-lg opacity-80">
-            {formatTimestamp(Number(_creationTime))}
+            {formatTimestamp(new Date(created_at).getTime())}
           </p>
         </div>
       </div>
@@ -87,7 +86,6 @@ export default function RecordingDesktop({
           {transcription ? (
             <div className="">{originalIsOpen ? transcription : summary}</div>
           ) : (
-            // Loading state for transcript
             <ul className="animate-pulse space-y-3">
               <li className="h-6 w-full rounded-full bg-gray-200 dark:bg-gray-700"></li>
               <li className="h-6 w-full rounded-full bg-gray-200 dark:bg-gray-700"></li>
@@ -117,14 +115,14 @@ export default function RecordingDesktop({
                       </div>
                       <div className="flex justify-between md:mt-2">
                         <p className="ml-9 text-[15px] font-[300] leading-[249%] tracking-[-0.6px] text-dark opacity-60 md:inline-block md:text-xl lg:text-xl">
-                          {new Date(Number(_creationTime)).toLocaleDateString()}
+                          {new Date(created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
               ))
-            : actionItems?.map((item: any, idx: number) => (
+            : items?.map((item: any, idx: number) => (
                 <div
                   className="border-[#00000033] py-1 md:border-t-[1px] md:py-2"
                   key={idx}
@@ -135,8 +133,7 @@ export default function RecordingDesktop({
                         <input
                           onChange={(e) => {
                             if (e.target.checked) {
-                              removeActionItem(item._id);
-                              toast.success('1 task completed.');
+                              removeActionItem(item.id);
                             }
                           }}
                           type="checkbox"
@@ -147,7 +144,7 @@ export default function RecordingDesktop({
                       </div>
                       <div className="flex justify-between md:mt-2">
                         <p className="ml-9 text-[15px] font-[300] leading-[249%] tracking-[-0.6px] text-dark opacity-60 md:inline-block md:text-xl lg:text-xl">
-                          {new Date(Number(_creationTime)).toLocaleDateString()}
+                          {new Date(created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>

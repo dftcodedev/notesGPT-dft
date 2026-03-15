@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import ConvexClientProvider from './ConvexClientProvider';
+import Providers from './providers';
 import Footer from '@/components/ui/Footer';
 import { Toaster } from 'react-hot-toast';
 import PlausibleProvider from 'next-plausible';
@@ -46,11 +46,11 @@ export default function RootLayout({
         <PlausibleProvider domain="usenotesgpt.com" />
       </head>
       <body>
-        <ConvexClientProvider>
+        <Providers>
           {children}
           <Footer />
           <Toaster position="bottom-left" reverseOrder={false} />
-        </ConvexClientProvider>
+        </Providers>
       </body>
     </html>
   );

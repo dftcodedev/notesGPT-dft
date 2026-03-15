@@ -1,22 +1,54 @@
 'use client';
 
-import { api } from '@/convex/_generated/api';
-import { usePreloadedQueryWithAuth } from '@/lib/hooks';
-import { Preloaded, useMutation } from 'convex/react';
+import { supabase } from '@/lib/supabase';
+import type { ActionItemWithTitle } from '@/lib/supabase';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react';
 
-export default function ActionItemsPage({
-  preloadedItems,
-}: {
-  preloadedItems: Preloaded<typeof api.notes.getActionItems>;
-}) {
-  const actionItems = usePreloadedQueryWithAuth(preloadedItems);
-  const mutateActionItems = useMutation(api.notes.removeActionItem);
+export default function ActionItemsPage() {
+  const [actionItems, setActionItems] = useState<ActionItemWithTitle[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function removeActionItem(actionId: any) {
-    // Trigger a mutation to remove the item from the list
-    mutateActionItems({ id: actionId });
+  useEffect(() => {
+    loadActionItems();
+  }, []);
+
+  const loadActionItems = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data: items } = await supabase
+      .from('action_items')
+      .select(`
+        *,
+        notes!inner(title)
+      `)
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if (items) {
+      const formattedItems = items.map((item: any) => ({
+        ...item,
+        title: item.notes?.title,
+      }));
+      setActionItems(formattedItems);
+    }
+    setLoading(false);
+  };
+
+  const removeActionItem = async (actionId: string) => {
+    await supabase.from('action_items').delete().eq('id', actionId);
+    setActionItems(actionItems.filter(item => item.id !== actionId));
+    toast.success('1 task completed.');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-2xl">Loading...</p>
+      </div>
+    );
   }
 
   return (
@@ -43,8 +75,7 @@ export default function ActionItemsPage({
                   <input
                     onChange={(e) => {
                       if (e.target.checked) {
-                        removeActionItem(item._id);
-                        toast.success('1 task completed.');
+                        removeActionItem(item.id);
                       }
                     }}
                     type="checkbox"
@@ -55,10 +86,10 @@ export default function ActionItemsPage({
                 </div>
                 <div className="flex justify-between gap-3 md:mt-2">
                   <p className="ml-9 text-[15px] font-[300] leading-[249%] tracking-[-0.6px] text-dark opacity-60 md:inline-block md:text-xl lg:text-xl">
-                    {new Date(item?._creationTime).toLocaleDateString()}
+                    {new Date(item?.created_at).toLocaleDateString()}
                   </p>
                   <p className="truncate text-[15px] font-[300] leading-[249%] tracking-[-0.6px] text-dark opacity-60 md:inline-block md:text-xl lg:text-xl">
-                    From: {item?.title}
+                    From: {item?.title || 'Untitled'}
                   </p>
                 </div>
               </div>

@@ -1,13 +1,31 @@
+'use client';
+
 import Link from 'next/link';
 import { UserNav } from './UserNav';
-import { currentUser } from '@clerk/nextjs/server';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
-export default async function Header() {
-  const user = await currentUser();
+export default function Header() {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <div className="container relative m-0 mx-auto py-10 md:px-10">
       <div className="max-width flex items-center justify-between">
-        {/* logo */}
         <Link className="flex w-fit items-center gap-[2px]" href="/dashboard">
           <img
             src="/logo.svg"
@@ -20,7 +38,6 @@ export default async function Header() {
             NotesGPT
           </h1>
         </Link>
-        {/* buttons */}
         <div className="flex w-fit items-center gap-[22px]">
           {user ? (
             <>
@@ -37,13 +54,9 @@ export default async function Header() {
                 Action Items
               </Link>
               <UserNav
-                image={user.imageUrl}
-                name={user.firstName + ' ' + user.lastName}
-                email={
-                  user.emailAddresses.find(
-                    ({ id }) => id === user.primaryEmailAddressId,
-                  )!.emailAddress
-                }
+                image={user.user_metadata?.avatar_url || ''}
+                name={user.user_metadata?.full_name || user.email || ''}
+                email={user.email || ''}
               />
             </>
           ) : (

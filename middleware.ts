@@ -1,12 +1,23 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const isPublicRoute = createRouteMatcher(['/']);
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const supabase = createMiddlewareClient({ req, res });
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const isPublicRoute = req.nextUrl.pathname === '/';
+
+  if (!isPublicRoute && !session) {
+    return NextResponse.redirect(new URL('/', req.url));
   }
-});
+
+  return res;
+}
 
 export const config = {
   matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],

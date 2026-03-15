@@ -1,23 +1,30 @@
-import { api } from '@/convex/_generated/api';
-import { useMutation } from 'convex/react';
+'use client';
+
+import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
 const RecordedfileItemCard = ({
   title,
   count,
-  _creationTime,
-  _id,
+  created_at,
+  id,
+  onDelete,
 }: {
-  title?: string;
+  title?: string | null;
   count: number;
-  _creationTime: number;
-  _id: any;
+  created_at: string;
+  id: string;
+  onDelete?: () => void;
 }) => {
-  const deleteNote = useMutation(api.notes.removeNote);
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await supabase.from('notes').delete().eq('id', id);
+    if (onDelete) onDelete();
+  };
 
   return (
     <Link
-      href={`/recording/${_id}`}
+      href={`/recording/${id}`}
       className="mx-2 flex items-center justify-between border-[0.5px] border-[#00000050] bg-white px-[23px] py-[17px] transition hover:bg-gray-100 md:w-full"
     >
       <div className="flex w-fit items-center gap-[23px]">
@@ -37,21 +44,18 @@ const RecordedfileItemCard = ({
             letterSpacing: '-0.6px',
           }}
         >
-          {title}
+          {title || 'Untitled'}
         </h1>
       </div>
       <div className="flex w-fit items-center gap-x-[40px] 2xl:gap-x-[56px]">
         <h3 className="hidden text-xl font-[200] leading-[114.3%] tracking-[-0.5px] md:inline-block">
-          {new Date(_creationTime).toDateString()}
+          {new Date(created_at).toDateString()}
         </h3>
         <h3 className="hidden text-xl font-[200] leading-[114.3%] tracking-[-0.5px] md:inline-block">
           {count} tasks
         </h3>
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            deleteNote({ id: _id });
-          }}
+          onClick={handleDelete}
           className="flex h-fit w-fit cursor-pointer items-center justify-center gap-5 bg-transparent p-2 transition hover:scale-125 md:inline-block"
         >
           <img src={'/icons/delete.svg'} alt="delete" width={20} height={20} />
